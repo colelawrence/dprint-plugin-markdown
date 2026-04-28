@@ -24,6 +24,16 @@ a|b|c|d
 | asdfffff | what hap | $22 |
 | hereissometex | allo | $224 |
 
+!! should format ragged rows compactly !!
+| A | B |
+| - | - |
+| 1 |
+
+[expect]
+| A | B |
+| --- | --- |
+| 1 |  |
+
 !! should correctly centre all the columns in this table !!
 |Tes|
 |:---:|
@@ -36,7 +46,7 @@ a|b|c|d
 | testd |
 | test |
 
-!! Should correctly determine column width for cells containing double-width characters like emoji !!
+!! Should format emoji content compactly !!
 
 | Name             | Required |
 | ---------------- | :------: |
