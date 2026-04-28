@@ -1172,6 +1172,9 @@ fn detect_metadata_language(text: &str, kind: MetadataBlockKind) -> Option<&'sta
   } else if yaml_score > 0 {
     Some("yaml")
   } else {
+    // Preserve delimiter-specific legacy behavior when the content does not
+    // clearly identify itself: YAML-style metadata was already routed through
+    // the YAML formatter, while plus-style metadata was previously emitted raw.
     match kind {
       MetadataBlockKind::YamlStyle => Some("yaml"),
       MetadataBlockKind::PlusesStyle => None,
