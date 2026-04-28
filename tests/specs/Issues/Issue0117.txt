@@ -7,9 +7,9 @@
 | `command \| filter` |
 
 [expect]
-| f\|oo               |
-| ------------------- |
-| b `\|` az           |
-| b **\|** im         |
-| test \| test        |
+| f\|oo |
+| --- |
+| b `\|` az |
+| b **\|** im |
+| test \| test |
 | `command \| filter` |

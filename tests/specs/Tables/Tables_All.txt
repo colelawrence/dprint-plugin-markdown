@@ -5,10 +5,10 @@ Some Data|Otherrrr|asdfffff|testingthis
 a|b|c|d
 
 [expect]
-| Testing   |   test   | Outtt    |       final |
-| --------- | :------: | :------- | ----------: |
+| Testing | test | Outtt | final |
+| --- | :---: | :--- | ---: |
 | Some Data | Otherrrr | asdfffff | testingthis |
-| a         |    b     | c        |           d |
+| a | b | c | d |
 
 !! should format when not inline !!
 | testing       | This          | Out   |
@@ -18,11 +18,11 @@ a|b|c|d
 | hereissometex | allo          |  $224 |
 
 [expect]
-| testing       |     This      |   Out |
-| ------------- | :-----------: | ----: |
-| testing       | anb kdl l l j | $1234 |
-| asdfffff      |   what hap    |   $22 |
-| hereissometex |     allo      |  $224 |
+| testing | This | Out |
+| --- | :---: | ---: |
+| testing | anb kdl l l j | $1234 |
+| asdfffff | what hap | $22 |
+| hereissometex | allo | $224 |
 
 !! should correctly centre all the columns in this table !!
 |Tes|
@@ -31,10 +31,10 @@ a|b|c|d
 |test|
 
 [expect]
-|  Tes  |
+| Tes |
 | :---: |
 | testd |
-| test  |
+| test |
 
 !! Should correctly determine column width for cells containing double-width characters like emoji !!
 
@@ -44,8 +44,8 @@ a|b|c|d
 
 [expect]
 | Name | Required |
-| ---- | :------: |
-| test |    ❌    |
+| --- | :---: |
+| test | ❌ |
 
 !! Should allow inline markup inside tables. These come from https://github.github.com/gfm/.
 | Type | Example
@@ -62,15 +62,15 @@ a|b|c|d
 | Raw HTML | <a><bab><c2c> |
 
 [expect]
-| Type                                    | Example               |
-| --------------------------------------- | --------------------- |
-| Backslash escapes                       | \*not emphasized*     |
-| Entity and numeric character references | &amp;                 |
-| Code spans                              | `code`                |
-| Emphasis and strong emphasis            | _emphasis_ **strong** |
-| Strikethrough                           | ~~test~~              |
-| Links                                   | [link](/uri "title")  |
-| Images                                  | ![foo](/url "title")  |
-| Autolinks                               | <http://foo.bar.baz>  |
-| Autolinks (extension)                   | www.commonmark.org    |
-| Raw HTML                                | <a><bab><c2c>         |
+| Type | Example |
+| --- | --- |
+| Backslash escapes | \*not emphasized* |
+| Entity and numeric character references | &amp; |
+| Code spans | `code` |
+| Emphasis and strong emphasis | _emphasis_ **strong** |
+| Strikethrough | ~~test~~ |
+| Links | [link](/uri "title") |
+| Images | ![foo](/url "title") |
+| Autolinks | <http://foo.bar.baz> |
+| Autolinks (extension) | www.commonmark.org |
+| Raw HTML | <a><bab><c2c> |

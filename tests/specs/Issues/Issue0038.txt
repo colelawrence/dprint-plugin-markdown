@@ -2,10 +2,10 @@
 
 # Test
 
-| Company                    |
-| -------------------------- |
-| [GitHub][github]           |
-| [Google][google]           |
+| Company |
+| --- |
+| [GitHub][github] |
+| [Google][google] |
 | [Amazon Web Services][aws] |
 
 [github]: https://github.com
@@ -21,10 +21,10 @@ A paragraph.
 [expect]
 # Test
 
-| Company                    |
-| -------------------------- |
-| [GitHub][github]           |
-| [Google][google]           |
+| Company |
+| --- |
+| [GitHub][github] |
+| [Google][google] |
 | [Amazon Web Services][aws] |
 
 [github]: https://github.com
