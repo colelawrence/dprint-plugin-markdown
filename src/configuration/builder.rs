@@ -85,6 +85,12 @@ impl ConfigurationBuilder {
     self.insert("headingKind", value.to_string().into())
   }
 
+  /// The style of markdown table formatting to use.
+  /// Default: `TableFormat::Aligned`
+  pub fn table_format(&mut self, value: TableFormat) -> &mut Self {
+    self.insert("tableFormat", value.to_string().into())
+  }
+
   /// The directive used to ignore a line.
   /// Default: `dprint-ignore`
   pub fn ignore_directive(&mut self, value: &str) -> &mut Self {
@@ -147,13 +153,14 @@ mod tests {
       .strong_kind(StrongKind::Underscores)
       .unordered_list_kind(UnorderedListKind::Asterisks)
       .heading_kind(HeadingKind::Atx)
+      .table_format(TableFormat::Compact)
       .ignore_directive("test")
       .ignore_file_directive("test")
       .ignore_start_directive("test")
       .ignore_end_directive("test");
 
     let inner_config = config.get_inner_config();
-    assert_eq!(inner_config.len(), 11);
+    assert_eq!(inner_config.len(), 12);
     let diagnostics = resolve_config(inner_config, &Default::default()).diagnostics;
     assert_eq!(diagnostics.len(), 0);
   }
@@ -178,6 +185,14 @@ mod tests {
     let config = config_builder.global_config(global_config).build();
     assert_eq!(config.line_width, 80); // this is different
     assert_eq!(config.new_line_kind == NewLineKind::LineFeed, true);
+    assert_eq!(config.table_format == TableFormat::Aligned, true);
+  }
+
+  #[test]
+  fn table_format_compact() {
+    let mut config_builder = ConfigurationBuilder::new();
+    let config = config_builder.table_format(TableFormat::Compact).build();
+    assert_eq!(config.table_format == TableFormat::Compact, true);
   }
 
   #[test]

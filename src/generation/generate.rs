@@ -844,6 +844,189 @@ fn gen_hard_break(_: &mut Context) -> PrintItems {
 }
 
 fn gen_table(table: &Table, context: &mut Context) -> PrintItems {
+  match context.configuration.table_format {
+    TableFormat::Aligned => gen_table_aligned(table, context),
+    TableFormat::Compact => gen_table_compact(table, context),
+  }
+}
+
+fn gen_table_aligned(table: &Table, context: &mut Context) -> PrintItems {
+  let header = table
+    .header
+    .cells
+    .iter()
+    .map(|cell| get_cell_items_and_width(cell, context))
+    .collect::<Vec<_>>();
+  let rows = table
+    .rows
+    .iter()
+    .map(|row| {
+      row
+        .cells
+        .iter()
+        .map(|cell| get_cell_items_and_width(cell, context))
+        .collect::<Vec<_>>()
+    })
+    .collect::<Vec<_>>();
+  let column_widths = get_column_widths(&header, &rows, &table.column_alignment);
+  let mut items = PrintItems::new();
+
+  items.extend(get_row_items(header, &column_widths, &table.column_alignment));
+  items.push_signal(Signal::NewLine);
+  items.extend(get_divider_row(&column_widths, &table.column_alignment));
+
+  for row in rows {
+    items.push_signal(Signal::NewLine);
+    items.extend(get_row_items(row, &column_widths, &table.column_alignment));
+  }
+
+  return items;
+
+  fn get_divider_row(column_widths: &[usize], column_alignments: &[ColumnAlignment]) -> PrintItems {
+    let mut items = PrintItems::new();
+    for (i, column_width) in column_widths.iter().enumerate() {
+      let column_alignment = column_alignments.get(i).copied().unwrap_or(ColumnAlignment::None);
+      if i == 0 {
+        items.push_sc(sc!("| "));
+      } else {
+        items.push_space();
+      }
+
+      let column_alignment_props = get_column_alignment_properties(column_alignment);
+      let dashes_count = column_width - column_alignment_props.count();
+
+      if column_alignment_props.has_left_colon {
+        items.push_sc(sc!(":"));
+      }
+      items.push_string("-".repeat(dashes_count));
+      if column_alignment_props.has_right_colon {
+        items.push_sc(sc!(":"));
+      }
+
+      items.push_sc(sc!(" |"));
+    }
+
+    ir_helpers::with_no_new_lines(items)
+  }
+
+  fn get_row_items(
+    row_cells: Vec<(PrintItems, usize)>,
+    column_widths: &[usize],
+    column_alignments: &[ColumnAlignment],
+  ) -> PrintItems {
+    let mut items = PrintItems::new();
+    for (i, (cell_items, cell_width)) in row_cells.into_iter().enumerate() {
+      let column_alignment = column_alignments.get(i).copied().unwrap_or(ColumnAlignment::None);
+      let column_max_width = *column_widths.get(i).unwrap();
+      let difference = column_max_width - cell_width;
+      if i == 0 {
+        items.push_sc(sc!("| "))
+      } else {
+        items.push_space();
+      }
+
+      if difference > 0 {
+        match column_alignment {
+          ColumnAlignment::None | ColumnAlignment::Left => {}
+          ColumnAlignment::Center => {
+            if difference > 1 {
+              items.push_string(" ".repeat((difference as f32 / 2_f32).floor() as usize))
+            }
+          }
+          ColumnAlignment::Right => {
+            items.push_string(" ".repeat(difference));
+          }
+        }
+      }
+
+      items.extend(cell_items);
+
+      if difference > 0 {
+        match column_alignment {
+          ColumnAlignment::None | ColumnAlignment::Left => {
+            items.push_string(" ".repeat(difference));
+          }
+          ColumnAlignment::Center => items.push_string(" ".repeat((difference as f32 / 2_f32).ceil() as usize)),
+          ColumnAlignment::Right => {}
+        }
+      }
+
+      items.push_sc(sc!(" |"));
+    }
+
+    ir_helpers::with_no_new_lines(items)
+  }
+
+  fn get_column_widths(
+    header: &[(PrintItems, usize)],
+    rows: &[Vec<(PrintItems, usize)>],
+    column_alignments: &[ColumnAlignment],
+  ) -> Vec<usize> {
+    let mut column_widths = Vec::new();
+    for i in 0.. {
+      let mut had_column = false;
+      let mut max_width = 0;
+
+      // get header width
+      if let Some((_, width)) = header.get(i) {
+        max_width = *width;
+        had_column = true;
+      }
+
+      // check column alignment row width
+      if let Some(column_alignment) = column_alignments.get(i) {
+        // + 1 in order to have at least one dash
+        max_width = std::cmp::max(
+          max_width,
+          get_column_alignment_properties(*column_alignment).count() + 1,
+        );
+        had_column = true;
+      }
+
+      // check each row width
+      for row in rows.iter() {
+        if let Some((_, width)) = row.get(i) {
+          max_width = std::cmp::max(max_width, *width);
+          had_column = true;
+        }
+      }
+
+      if had_column {
+        column_widths.push(max_width);
+      } else {
+        break;
+      }
+    }
+    column_widths
+  }
+
+  struct ColumnAlignmentProperties {
+    has_left_colon: bool,
+    has_right_colon: bool,
+  }
+
+  impl ColumnAlignmentProperties {
+    pub fn count(&self) -> usize {
+      (if self.has_left_colon { 1 } else { 0 }) + (if self.has_right_colon { 1 } else { 0 })
+    }
+  }
+
+  fn get_column_alignment_properties(column_alignment: ColumnAlignment) -> ColumnAlignmentProperties {
+    let has_left_colon = column_alignment == ColumnAlignment::Left || column_alignment == ColumnAlignment::Center;
+    let has_right_colon = column_alignment == ColumnAlignment::Right || column_alignment == ColumnAlignment::Center;
+    ColumnAlignmentProperties {
+      has_left_colon,
+      has_right_colon,
+    }
+  }
+
+  fn get_cell_items_and_width(cell: &TableCell, context: &mut Context) -> (PrintItems, usize) {
+    let items = gen_table_cell(cell, context);
+    get_items_single_line_width(items)
+  }
+}
+
+fn gen_table_compact(table: &Table, context: &mut Context) -> PrintItems {
   // Keep table output structurally consistent instead of visually column-aligned.
   // This emits exactly one delimiter-adjacent space around each non-empty cell.
   let header = table
@@ -959,6 +1142,12 @@ fn gen_metadata_block(node: &MetadataBlock, context: &mut Context) -> PrintItems
   items
 }
 
+fn get_items_single_line_width(items: PrintItems) -> (PrintItems, usize) {
+  let (items, cloned_items) = clone_items(items);
+  let width = measure_single_line_width(cloned_items);
+  (items, width)
+}
+
 fn clone_items(items: PrintItems) -> (PrintItems, PrintItems) {
   // todo: something in the core library? This is weird
   let rc_path = items.into_rc_path();
@@ -967,6 +1156,10 @@ fn clone_items(items: PrintItems) -> (PrintItems, PrintItems) {
   items1.push_optional_path(rc_path);
   items2.push_optional_path(rc_path);
   (items1, items2)
+}
+
+fn measure_single_line_width(items: PrintItems) -> usize {
+  UnicodeWidthStr::width(get_items_text(items).as_str())
 }
 
 fn get_items_text(items: PrintItems) -> String {

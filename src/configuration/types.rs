@@ -16,6 +16,7 @@ pub struct Configuration {
   pub strong_kind: StrongKind,
   pub unordered_list_kind: UnorderedListKind,
   pub heading_kind: HeadingKind,
+  pub table_format: TableFormat,
   pub ignore_directive: String,
   pub ignore_file_directive: String,
   pub ignore_start_directive: String,
@@ -115,3 +116,15 @@ pub enum HeadingKind {
 }
 
 generate_str_to_from![HeadingKind, [Setext, "setext"], [Atx, "atx"]];
+
+/// The style of markdown table formatting to use.
+#[derive(Clone, PartialEq, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TableFormat {
+  /// Pads cells to visually align columns (default).
+  Aligned,
+  /// Emits compact, canonical tables with no width-derived padding.
+  Compact,
+}
+
+generate_str_to_from![TableFormat, [Aligned, "aligned"], [Compact, "compact"]];

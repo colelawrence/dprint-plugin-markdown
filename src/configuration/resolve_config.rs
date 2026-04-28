@@ -65,6 +65,7 @@ pub fn resolve_config(
       &mut diagnostics,
     ),
     heading_kind: get_value(&mut config, "headingKind", HeadingKind::Atx, &mut diagnostics),
+    table_format: get_value(&mut config, "tableFormat", TableFormat::Aligned, &mut diagnostics),
     ignore_directive: get_value(
       &mut config,
       "ignoreDirective",

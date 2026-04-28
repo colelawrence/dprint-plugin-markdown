@@ -84,6 +84,18 @@
         "description": "Uses an underline of = or - beneath the heading text (setext headings). Only applies to level 1 and 2 headings."
       }]
     },
+    "tableFormat": {
+      "description": "The style of markdown table formatting to use.",
+      "type": "string",
+      "default": "aligned",
+      "oneOf": [{
+        "const": "aligned",
+        "description": "Pads cells to visually align columns."
+      }, {
+        "const": "compact",
+        "description": "Emits compact, canonical tables with no width-derived padding."
+      }]
+    },
     "deno": {
       "description": "Top level configuration that sets the configuration to what is used in Deno.",
       "type": "boolean",
@@ -124,6 +136,9 @@
     },
     "headingKind": {
       "$ref": "#/definitions/headingKind"
+    },
+    "tableFormat": {
+      "$ref": "#/definitions/tableFormat"
     },
     "deno": {
       "$ref": "#/definitions/deno"
