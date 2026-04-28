@@ -109,6 +109,7 @@ impl SyncPluginHandler<Configuration> for MarkdownPluginHandler {
 
       // Fall back to built-in mappings
       match tag_lower.as_str() {
+        "markdown" | "mdown" | "mkdn" | "mdwn" | "mkd" | "md" => Some("md"),
         "typescript" | "ts" => Some("ts"),
         "tsx" => Some("tsx"),
         "javascript" | "js" => Some("js"),

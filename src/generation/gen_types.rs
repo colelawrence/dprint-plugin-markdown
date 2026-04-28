@@ -128,9 +128,12 @@ impl<'a> Context<'a> {
     let line_width = std::cmp::max(10, self.configuration.line_width as i32 - self.indent_level as i32) as u32;
 
     match tag {
-      "markdown" | "md" => format_text(text, self.configuration, |tag, file_text, line_width| {
-        (self.format_code_block_text)(tag, file_text, line_width)
-      }),
+      // Keep Markdown fenced-code aliases aligned with the plugin's supported file extensions.
+      "markdown" | "mdown" | "mkdn" | "mdwn" | "mkd" | "md" => {
+        format_text(text, self.configuration, |tag, file_text, line_width| {
+          (self.format_code_block_text)(tag, file_text, line_width)
+        })
+      }
       _ => (self.format_code_block_text)(tag, text, line_width),
     }
   }

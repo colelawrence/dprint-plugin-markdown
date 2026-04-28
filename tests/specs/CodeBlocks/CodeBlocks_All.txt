@@ -191,6 +191,28 @@ t````
 Never mind
 ```
 
+!! should format markdown in alternate markdown-extension code blocks !!
+
+```mkd
+# Testing
+
+
+>this is a blockquote
+
+ Never mind
+
+```
+
+
+[expect]
+```mkd
+# Testing
+
+> this is a blockquote
+
+Never mind
+```
+
 !! should format markdown in `markdown` code blocks !!
 
 ```md
