@@ -33,6 +33,13 @@ fn main() {
           let end = format!("_formatted_{}", line_width);
           if tag == "format" && !file_text.ends_with(&end) {
             Ok(Some(format!("{}{}\n\n", file_text, end)))
+          } else if (tag == "yaml" || tag == "toml") && file_text.contains("format_metadata") {
+            let end = format!("# {}_metadata_formatted_{}", tag, line_width);
+            if file_text.contains(&end) {
+              Ok(None)
+            } else {
+              Ok(Some(format!("{}\n{}\n", file_text.trim_end(), end)))
+            }
           } else {
             Ok(None)
           }
@@ -52,6 +59,13 @@ fn main() {
             let end = format!("_formatted_{}", line_width);
             if tag == "format" && !file_text.ends_with(&end) {
               Ok(Some(format!("{}{}\n\n", file_text, end)))
+            } else if (tag == "yaml" || tag == "toml") && file_text.contains("format_metadata") {
+              let end = format!("# {}_metadata_formatted_{}", tag, line_width);
+              if file_text.contains(&end) {
+                Ok(None)
+              } else {
+                Ok(Some(format!("{}\n{}\n", file_text.trim_end(), end)))
+              }
             } else {
               Ok(None)
             }

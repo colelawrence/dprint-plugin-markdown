@@ -1122,24 +1122,97 @@ fn gen_metadata_block(node: &MetadataBlock, context: &mut Context) -> PrintItems
 
   items.push_sc(delimiter);
   items.push_signal(Signal::NewLine);
-  match node.kind {
-    MetadataBlockKind::YamlStyle => {
-      let text = context
-        .format_text("yaml", &node.text)
-        .ok()
-        .flatten()
-        .map(Cow::from)
-        .unwrap_or_else(|| Cow::from(&node.text));
-      items.extend(ir_helpers::gen_from_string_trim_line_ends(text.trim_end()));
-    }
-    MetadataBlockKind::PlusesStyle => {
-      items.extend(ir_helpers::gen_from_raw_string_trim_line_ends(node.text.trim_end()));
-    }
+  if let Some(language) = detect_metadata_language(&node.text, node.kind) {
+    let text = context
+      .format_text(language, &node.text)
+      .ok()
+      .flatten()
+      .map(Cow::from)
+      .unwrap_or_else(|| Cow::from(&node.text));
+    items.extend(ir_helpers::gen_from_string_trim_line_ends(text.trim_end()));
+  } else {
+    items.extend(ir_helpers::gen_from_raw_string_trim_line_ends(node.text.trim_end()));
   }
   items.push_signal(Signal::NewLine);
   items.push_sc(delimiter);
 
   items
+}
+
+fn detect_metadata_language(text: &str, kind: MetadataBlockKind) -> Option<&'static str> {
+  let mut toml_score = 0;
+  let mut yaml_score = 0;
+
+  for line in text.lines().map(str::trim) {
+    if line.is_empty() || line.starts_with('#') || line == "---" || line == "..." {
+      continue;
+    }
+
+    if is_toml_section_header(line) {
+      toml_score += 3;
+      continue;
+    }
+
+    if is_yaml_list_item(line)
+      || is_yaml_key_value(line)
+      || line.starts_with('&')
+      || line.starts_with('*')
+      || line.starts_with('!')
+    {
+      yaml_score += 2;
+    }
+
+    if is_toml_key_value(line) {
+      toml_score += 2;
+    }
+  }
+
+  if toml_score > yaml_score && toml_score > 0 {
+    Some("toml")
+  } else if yaml_score > 0 {
+    Some("yaml")
+  } else {
+    match kind {
+      MetadataBlockKind::YamlStyle => Some("yaml"),
+      MetadataBlockKind::PlusesStyle => None,
+    }
+  }
+}
+
+fn is_toml_section_header(line: &str) -> bool {
+  let content = line.strip_prefix("[[").and_then(|line| line.strip_suffix("]]"));
+  let content = content.or_else(|| line.strip_prefix('[').and_then(|line| line.strip_suffix(']')));
+  content.is_some_and(|content| !content.trim().is_empty() && !content.contains(':'))
+}
+
+fn is_toml_key_value(line: &str) -> bool {
+  let Some(equals_index) = line.find('=') else {
+    return false;
+  };
+  let key = line[..equals_index].trim();
+  if key.is_empty() || key.contains(':') {
+    return false;
+  }
+  key
+    .chars()
+    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.' | '"' | '\''))
+}
+
+fn is_yaml_key_value(line: &str) -> bool {
+  let Some(colon_index) = line.find(':') else {
+    return false;
+  };
+  if line[..colon_index].contains('=') {
+    return false;
+  }
+  let after_colon = line[colon_index + 1..].chars().next();
+  after_colon.is_none_or(|c| c.is_whitespace() || matches!(c, '|' | '>' | '[' | '{' | '&' | '*' | '!'))
+}
+
+fn is_yaml_list_item(line: &str) -> bool {
+  line
+    .strip_prefix('-')
+    .is_some_and(|rest| rest.starts_with(char::is_whitespace))
 }
 
 fn get_items_single_line_width(items: PrintItems) -> (PrintItems, usize) {

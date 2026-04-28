@@ -1,0 +1,65 @@
+!! should format toml-like yaml-style metadata as toml !!
+---
+# format_metadata
+title = "Some Title"
+---
+
+[expect]
+---
+# format_metadata
+title = "Some Title"
+# toml_metadata_formatted_80
+---
+
+!! should format yaml-like plus-style metadata as yaml !!
++++
+# format_metadata
+title: Some Title
++++
+
+[expect]
++++
+# format_metadata
+title: Some Title
+# yaml_metadata_formatted_80
++++
+
+!! should format toml-like plus-style metadata as toml !!
++++
+# format_metadata
+[params]
+title = "Some Title"
++++
+
+[expect]
++++
+# format_metadata
+[params]
+title = "Some Title"
+# toml_metadata_formatted_80
++++
+
+!! should keep ambiguous plus-style metadata raw !!
++++
+# format_metadata
+just some text
++++
+
+[expect]
++++
+# format_metadata
+just some text
++++
+
+!! should keep ambiguous yaml-style metadata routed to yaml for legacy behavior !!
+---
+# format_metadata
+just some text
+---
+
+[expect]
+---
+# format_metadata
+just some text
+# yaml_metadata_formatted_80
+---
