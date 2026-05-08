@@ -39,6 +39,20 @@ fn main() {
               Ok(Some(format!("{}{}\n\n", file_text, end)))
             } else if tag == "tsx" && file_text.contains("format_mdx_esm_unsafe") {
               Ok(Some("import { A, B } from \"x\"\n\n# injected markdown\n".to_string()))
+            } else if tag == "tsx" && file_text.contains("import {   External}") {
+              Ok(Some("import { External } from './some/place.js'".to_string()))
+            } else if tag == "tsx" && file_text.contains("export const LocalInline = (properties) => <span") {
+              Ok(None)
+            } else if tag == "tsx" && file_text.contains("export const   LocalInline = properties =>") {
+              Ok(Some(
+                "export const LocalInline = (properties) => <span style={{ color: 'red' }} {...properties} />"
+                  .to_string(),
+              ))
+            } else if tag == "tsx" && file_text.contains("style={{   color") {
+              Ok(Some(
+                "export const Local = (properties) => (\n  <span style={{ color: \"red\" }} {...properties} />\n)"
+                  .to_string(),
+              ))
             } else if tag == "tsx" && file_text.contains("format_mdx_esm") {
               Ok(Some(file_text.replace("import {A,B} from", "import { A, B } from")))
             } else if tag == "tsx" && file_text.contains("format_mdx_jsx_inject_markdown") {

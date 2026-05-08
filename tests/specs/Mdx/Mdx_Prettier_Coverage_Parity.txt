@@ -1,0 +1,134 @@
+-- file.mdx --
+~~ tableFormat: compact ~~
+== should handle prettier esm fixture with oxc-style embedded formatting ==
+<!-- https://mdxjs.com/docs/what-is-mdx/#esm -->
+
+import {   External} from './some/place.js'
+
+export const   LocalInline = properties => <span style={{color: 'red'}} {...properties} />
+
+export const Local = (properties) => (
+         <span    style={{   color: "red" }} {...properties} />
+);
+
+An <External>external</External> component, a <LocalInline>local inline one</LocalInline>, and a <Local>local block one</Local>.
+
+[expect]
+<!-- https://mdxjs.com/docs/what-is-mdx/#esm -->
+
+import { External } from './some/place.js'
+export const LocalInline = (properties) => <span style={{ color: 'red' }} {...properties} />
+export const Local = (properties) => (
+  <span style={{ color: "red" }} {...properties} />
+)
+An <External>external</External> component, a <LocalInline>local inline one</LocalInline>, and a <Local>local block one</Local>.
+
+== should handle prettier invalid import-like fixture without treating it all as esm ==
+<!-- These are not `import`s -->
+
+import .meta.resolve (         foo)
+
+import .meta; export {} from "./foo"
+
+import .meta; import {} from "./foo"
+
+import ("./foo")
+import {} from   "./foo";            export {}
+
+[expect]
+<!-- These are not `import`s -->
+
+import .meta.resolve (         foo)
+
+import .meta; export {} from "./foo"
+
+import .meta; import {} from "./foo"
+
+import ("./foo")
+import {} from   "./foo";            export {}
+
+== should handle prettier mdx ignore fixture with html and mdx comments ==
+An ignore comment (HTML):
+
+<!-- dprint-ignore -->
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())
+```
+
+An ignore comment (ES):
+
+{/* dprint-ignore */}
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())
+```
+
+No comment:
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())
+```
+
+[expect]
+An ignore comment (HTML):
+
+<!-- dprint-ignore -->
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())
+```
+
+An ignore comment (ES):
+
+{/* dprint-ignore */}
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())
+```
+
+No comment:
+
+```format
+reallyLongCall(reallyLongArg(), omgSoManyParameters(), IShouldRefactorThis())_formatted_80
+```
+
+== should handle prettier inline html fixture without block jsx corruption ==
+This is an example of a component _being used in some italic markdown with some <Bolded />, 
+and as you can see_ once you close the italics, it will break incorrectly when prettier formats it.
+
+| Column 1 | Column 2 |
+| -- | -- |
+| **`Row 1 Code`** | Some text. |
+| **<code>Row 2 Code</code>** | Some text. |
+| **<InlineCode>Row 2 Code</InlineCode>** | Some text. |
+
+[expect]
+This is an example of a component _being used in some italic markdown with some <Bolded />,
+and as you can see_ once you close the italics, it will break incorrectly when prettier formats it.
+
+| Column 1 | Column 2 |
+| --- | --- |
+| **`Row 1 Code`** | Some text. |
+| **<code>Row 2 Code</code>** | Some text. |
+| **<InlineCode>Row 2 Code</InlineCode>** | Some text. |
+
+== should handle prettier jsx codeblock fixture as fenced code not mdx jsx ==
+```jsx
+<div>foo</div>
+```
+
+```jsx
+const a = 1;
+<div>foo</div>;
+```
+
+[expect]
+```jsx
+<div>foo</div>
+```
+
+```jsx
+const a = 1;
+<div>foo</div>;
+```
