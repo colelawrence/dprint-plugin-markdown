@@ -52,6 +52,100 @@ export const format_mdx_esm_unsafe = true
   <Bar>
 </Foo>
 
+== should preserve top-level jsx blocks with markdown children raw ==
+<Note format_mdx_jsx_complex="yes" type="info">
+  **Note**:   keep     markdown spacing
+  [Version 3 migration guide][migrating].
+</Note>
+
+[expect]
+<Note format_mdx_jsx_complex="yes" type="info">
+  **Note**:   keep     markdown spacing
+  [Version 3 migration guide][migrating].
+</Note>
+
+== should preserve single-line top-level jsx with markdown children raw ==
+<Note format_mdx_jsx_complex="yes"> **bold** [link][ref] </Note>
+
+[ref]: /docs
+
+[expect]
+<Note format_mdx_jsx_complex="yes"> **bold** [link][ref] </Note>
+
+[ref]: /docs
+
+== should preserve top-level jsx blocks with plain prose children raw ==
+<Note format_mdx_jsx_complex="yes">
+  keep     this prose as mdx markdown
+</Note>
+
+[expect]
+<Note format_mdx_jsx_complex="yes">
+  keep     this prose as mdx markdown
+</Note>
+
+== should preserve nested same-tag jsx blocks with markdown children raw ==
+<Note format_mdx_jsx_complex="yes">
+  <Note>
+    **nested** markdown
+  </Note>
+  outer     prose
+</Note>
+
+[expect]
+<Note format_mdx_jsx_complex="yes">
+  <Note>
+    **nested** markdown
+  </Note>
+  outer     prose
+</Note>
+
+== should not scan jsx-like lines inside fenced code ==
+```mdx
+<Note format_mdx_jsx_complex="yes">
+  **code** stays code
+</Note>
+```
+
+[expect]
+```mdx
+<Note format_mdx_jsx_complex="yes">
+  **code** stays code
+</Note>
+```
+
+== should ignore fenced code closers inside jsx children ==
+<Note format_mdx_jsx_complex="yes">
+```mdx
+</Note>
+```
+keep     this prose after the backtick fence
+~~~mdx
+</Note>
+~~~
+keep     this prose after the tilde fence
+</Note>
+
+[expect]
+<Note format_mdx_jsx_complex="yes">
+```mdx
+</Note>
+```
+keep     this prose after the backtick fence
+~~~mdx
+</Note>
+~~~
+keep     this prose after the tilde fence
+</Note>
+
+== should preserve adjacent top-level jsx and await expression blocks ==
+<Component />
+{await Promise.resolve(42)}
+
+[expect]
+<Component />
+{await Promise.resolve(42)}
+
 == should preserve inline jsx and expressions in markdown prose ==
 A <Badge value={count} /> badge and {value} expression.
 

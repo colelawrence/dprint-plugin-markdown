@@ -8,6 +8,7 @@ use dprint_core::formatting::*;
 use super::configuration::Configuration;
 use super::generation::common::Html;
 use super::generation::common::Node;
+use super::generation::common::Ranged;
 use super::generation::common::SourceFile;
 use super::generation::file_has_ignore_file_directive;
 use super::generation::generate;
@@ -165,12 +166,19 @@ fn format_mdx_embedded_blocks(
   format_embedded_text: &mut impl for<'a> FnMut(&str, &'a str, u32) -> Result<Option<String>>,
 ) -> Option<String> {
   let source_file = parse_cmark_ast(file_text).ok()?;
+  let preserve_ranges = mdx_line_boundary_preserve_ranges(file_text);
   let mut replacements = Vec::new();
 
   for node in &source_file.children {
     let Some(embedded_block) = mdx_embedded_block(node, file_text) else {
       continue;
     };
+    if preserve_ranges
+      .iter()
+      .any(|range| ranges_overlap(range, &embedded_block.range))
+    {
+      continue;
+    }
     let block_text = &file_text[embedded_block.range.clone()];
     if let Ok(Some(formatted_text)) = format_embedded_text("tsx", block_text, line_width) {
       let formatted_text = formatted_text.trim_end().to_string();
@@ -251,10 +259,36 @@ fn mdx_embedded_block(node: &Node, file_text: &str) -> Option<MdxEmbeddedBlock> 
 }
 
 fn preserve_mdx_embedded_blocks(mut source_file: SourceFile, file_text: &str) -> SourceFile {
+  let preserve_ranges = mdx_line_boundary_preserve_ranges(file_text);
+  let mut preserve_range_index = 0;
   let mut children = Vec::with_capacity(source_file.children.len());
   let mut remaining = source_file.children.into_iter().peekable();
 
   while let Some(node) = remaining.next() {
+    while preserve_ranges
+      .get(preserve_range_index)
+      .is_some_and(|range| range.end <= node.range().start)
+    {
+      preserve_range_index += 1;
+    }
+    if let Some(preserve_range) = preserve_ranges.get(preserve_range_index) {
+      if range_contains_node_start(preserve_range, &node) {
+        while remaining
+          .peek()
+          .is_some_and(|next_node| next_node.range().start < preserve_range.end)
+        {
+          remaining.next();
+        }
+        children.push(
+          Html {
+            range: preserve_range.clone(),
+          }
+          .into(),
+        );
+        continue;
+      }
+    }
+
     let Some(block) = mdx_embedded_block(&node, file_text) else {
       if let Some(mut raw_range) = mdx_preserve_only_node_range(&node, file_text) {
         while let Some(next_node) = remaining.peek() {
@@ -291,6 +325,184 @@ fn preserve_mdx_embedded_blocks(mut source_file: SourceFile, file_text: &str) ->
 
   source_file.children = children;
   source_file
+}
+
+fn mdx_line_boundary_preserve_ranges(file_text: &str) -> Vec<std::ops::Range<usize>> {
+  let lines = collect_line_ranges(file_text);
+  let mut preserve_ranges = Vec::new();
+  let mut fenced_code_kind = None;
+
+  for (index, line) in lines.iter().enumerate() {
+    let text = &file_text[line.clone()];
+    let trimmed = text.trim_start();
+    if let Some(kind) = fenced_code_delimiter_kind(trimmed) {
+      if fenced_code_kind == Some(kind) {
+        fenced_code_kind = None;
+      } else if fenced_code_kind.is_none() {
+        fenced_code_kind = Some(kind);
+      }
+      continue;
+    }
+    if fenced_code_kind.is_some() || has_leading_indent(text) || !is_mdx_jsx_opening_line(trimmed) {
+      continue;
+    }
+    let Some(tag_name) = mdx_jsx_tag_name(trimmed) else {
+      continue;
+    };
+    if single_line_jsx_contains_markdown_child(trimmed, tag_name) {
+      preserve_ranges.push(line.clone());
+      continue;
+    }
+    let Some(end_index) = find_top_level_jsx_closing_line(&lines, file_text, index + 1, tag_name) else {
+      continue;
+    };
+    if jsx_range_contains_markdown_child(&lines, file_text, index + 1, end_index) {
+      preserve_ranges.push(line.start..lines[end_index].end);
+    }
+  }
+
+  preserve_ranges
+}
+
+fn collect_line_ranges(file_text: &str) -> Vec<std::ops::Range<usize>> {
+  let mut ranges = Vec::new();
+  let mut start = 0;
+  for line in file_text.split_inclusive('\n') {
+    let end = start + line.trim_end_matches(['\r', '\n']).len();
+    ranges.push(start..end);
+    start += line.len();
+  }
+  if start < file_text.len() {
+    ranges.push(start..file_text.len());
+  }
+  ranges
+}
+
+fn single_line_jsx_contains_markdown_child(text: &str, tag_name: &str) -> bool {
+  let closing_start = format!("</{}", tag_name);
+  let Some(open_end) = text.find('>') else {
+    return false;
+  };
+  let Some(close_start) = text.rfind(&closing_start) else {
+    return false;
+  };
+  close_start > open_end && is_markdown_child_line(&text[open_end + 1..close_start])
+}
+
+fn find_top_level_jsx_closing_line(
+  lines: &[std::ops::Range<usize>],
+  file_text: &str,
+  start_index: usize,
+  tag_name: &str,
+) -> Option<usize> {
+  let mut nested_same_tag_depth = 0;
+  let mut fenced_code_kind = None;
+  for (index, line) in lines.iter().enumerate().skip(start_index) {
+    let text = file_text[line.clone()].trim_start();
+    if let Some(kind) = fenced_code_delimiter_kind(text) {
+      if fenced_code_kind == Some(kind) {
+        fenced_code_kind = None;
+      } else if fenced_code_kind.is_none() {
+        fenced_code_kind = Some(kind);
+      }
+      continue;
+    }
+    if fenced_code_kind.is_some() {
+      continue;
+    }
+    if is_mdx_jsx_opening_line(text)
+      && mdx_jsx_tag_name(text) == Some(tag_name)
+      && !single_line_jsx_has_closing_tag(text, tag_name)
+    {
+      nested_same_tag_depth += 1;
+      continue;
+    }
+    if is_mdx_jsx_closing_line(text, tag_name) {
+      if nested_same_tag_depth == 0 {
+        return Some(index);
+      }
+      nested_same_tag_depth -= 1;
+    }
+  }
+  None
+}
+
+fn jsx_range_contains_markdown_child(
+  lines: &[std::ops::Range<usize>],
+  file_text: &str,
+  start_index: usize,
+  end_index: usize,
+) -> bool {
+  lines[start_index..end_index].iter().any(|line| {
+    let text = file_text[line.clone()].trim_start();
+    is_markdown_child_line(text)
+  })
+}
+
+fn is_markdown_child_line(text: &str) -> bool {
+  let text = text.trim_start();
+  !text.is_empty() && !text.starts_with('<') && !text.starts_with('{')
+}
+
+fn is_mdx_jsx_opening_line(text: &str) -> bool {
+  is_mdx_jsx_block(text) && !text.starts_with("</") && !text.ends_with("/>")
+}
+
+fn is_mdx_jsx_closing_line(text: &str, tag_name: &str) -> bool {
+  let Some(rest) = text.strip_prefix("</") else {
+    return false;
+  };
+  let Some(rest) = rest.strip_prefix(tag_name) else {
+    return false;
+  };
+  rest.starts_with('>') || rest.chars().next().is_some_and(char::is_whitespace)
+}
+
+fn single_line_jsx_has_closing_tag(text: &str, tag_name: &str) -> bool {
+  let closing_start = format!("</{}", tag_name);
+  text.find('>').is_some_and(|open_end| {
+    text[open_end + 1..]
+      .find(&closing_start)
+      .is_some_and(|close_start| is_mdx_jsx_closing_line(&text[open_end + 1 + close_start..], tag_name))
+  })
+}
+
+fn mdx_jsx_tag_name(text: &str) -> Option<&str> {
+  let rest = text.strip_prefix('<')?;
+  if rest.starts_with('>') || rest.starts_with('/') {
+    return None;
+  }
+  let tag_name_end = rest
+    .find(|c: char| c.is_whitespace() || c == '>' || c == '/')
+    .unwrap_or(rest.len());
+  if tag_name_end == 0 {
+    None
+  } else {
+    Some(&rest[..tag_name_end])
+  }
+}
+
+fn fenced_code_delimiter_kind(text: &str) -> Option<char> {
+  if text.starts_with("```") {
+    Some('`')
+  } else if text.starts_with("~~~") {
+    Some('~')
+  } else {
+    None
+  }
+}
+
+fn has_leading_indent(text: &str) -> bool {
+  text.starts_with(' ') || text.starts_with('\t')
+}
+
+fn ranges_overlap(left: &std::ops::Range<usize>, right: &std::ops::Range<usize>) -> bool {
+  left.start < right.end && right.start < left.end
+}
+
+fn range_contains_node_start(range: &std::ops::Range<usize>, node: &Node) -> bool {
+  let node_start = node.range().start;
+  range.start <= node_start && node_start < range.end
 }
 
 fn mdx_preserve_only_node_range(node: &Node, file_text: &str) -> Option<std::ops::Range<usize>> {
