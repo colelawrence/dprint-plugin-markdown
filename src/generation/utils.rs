@@ -59,7 +59,11 @@ pub fn file_has_ignore_file_directive(file_text: &str, directive_inner_text: &st
 
 pub fn get_ignore_comment_regex(inner_text: &str) -> Regex {
   // todo: don't use regex
-  let text = format!(r"^\s*<!\-\-\s*{}\s*\-\->\s*", inner_text);
+  let inner_text = regex::escape(inner_text);
+  let text = format!(
+    r"^\s*(?:<!\-\-\s*{}\s*\-\->|\{{\s*/\*\s*{}\s*\*/\s*\}})\s*",
+    inner_text, inner_text
+  );
   Regex::new(&text).unwrap()
 }
 

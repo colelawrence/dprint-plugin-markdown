@@ -1,0 +1,27 @@
+-- file.mdx --
+~~ tableFormat: compact ~~
+== should preserve inline jsx inside markdown emphasis ==
+This is an example of _italic markdown with some <Bolded /> inline jsx_ after it.
+
+[expect]
+This is an example of _italic markdown with some <Bolded /> inline jsx_ after it.
+
+== should preserve jsx at the start of prose instead of treating the paragraph as a block ==
+<ExternalLink href="http://example.com">Prettier</ExternalLink> is an opinionated-code-formatter.
+
+[expect]
+<ExternalLink href="http://example.com">Prettier</ExternalLink> is an opinionated-code-formatter.
+
+== should tolerate jsx and html-like inline table cell content ==
+| Column 1 | Column 2 |
+| -- | -- |
+| **`Row 1 Code`** | Some text. |
+| **<code>Row 2 Code</code>** | Some text. |
+| **<InlineCode>Row 3 Code</InlineCode>** | Some text. |
+
+[expect]
+| Column 1 | Column 2 |
+| --- | --- |
+| **`Row 1 Code`** | Some text. |
+| **<code>Row 2 Code</code>** | Some text. |
+| **<InlineCode>Row 3 Code</InlineCode>** | Some text. |

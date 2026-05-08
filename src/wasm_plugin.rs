@@ -40,6 +40,7 @@ impl SyncPluginHandler<Configuration> for MarkdownPluginHandler {
           "mkdn".to_string(),
           "mdown".to_string(),
           "markdown".to_string(),
+          "mdx".to_string(),
         ],
         file_names: vec![],
       },
@@ -76,27 +77,32 @@ impl SyncPluginHandler<Configuration> for MarkdownPluginHandler {
   ) -> FormatResult {
     let file_text = String::from_utf8(request.file_bytes)?;
     let config = request.config.clone();
-    return super::format_text(&file_text, request.config, |tag, file_text, line_width| {
-      if let Some(ext) = tag_to_extension(tag, &config) {
-        let file_path = PathBuf::from(format!("file.{}", ext));
-        let mut additional_config = ConfigKeyMap::new();
-        additional_config.insert("lineWidth".into(), (line_width as i32).into());
-        let request = SyncHostFormatRequest {
-          file_path: &file_path,
-          file_bytes: file_text.as_bytes(),
-          range: FormatRange::None,
-          override_config: &additional_config,
-        };
-        let result = format_with_host(request);
-        match result {
-          Ok(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
-          Ok(None) => Ok(None),
-          Err(err) => Err(err),
+    return super::format_text_for_file_path(
+      request.file_path,
+      &file_text,
+      request.config,
+      |tag, file_text, line_width| {
+        if let Some(ext) = tag_to_extension(tag, &config) {
+          let file_path = PathBuf::from(format!("file.{}", ext));
+          let mut additional_config = ConfigKeyMap::new();
+          additional_config.insert("lineWidth".into(), (line_width as i32).into());
+          let request = SyncHostFormatRequest {
+            file_path: &file_path,
+            file_bytes: file_text.as_bytes(),
+            range: FormatRange::None,
+            override_config: &additional_config,
+          };
+          let result = format_with_host(request);
+          match result {
+            Ok(Some(bytes)) => Ok(Some(String::from_utf8(bytes)?)),
+            Ok(None) => Ok(None),
+            Err(err) => Err(err),
+          }
+        } else {
+          Ok(None)
         }
-      } else {
-        Ok(None)
-      }
-    })
+      },
+    )
     .map(|maybe_text| maybe_text.map(|t| t.into_bytes()));
 
     fn tag_to_extension<'a>(tag: &str, config: &'a Configuration) -> Option<&'a str> {

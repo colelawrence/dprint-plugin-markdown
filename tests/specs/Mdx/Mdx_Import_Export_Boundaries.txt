@@ -1,0 +1,40 @@
+-- file.mdx --
+== should preserve invalid import-like declarations as prose/raw mdx ==
+<!-- These are not `import`s -->
+
+import .meta.resolve (         foo)
+
+import .meta; export {} from "./foo"
+
+import .meta; import {} from "./foo"
+
+import ("./foo")
+
+[expect]
+<!-- These are not `import`s -->
+
+import .meta.resolve (         foo)
+
+import .meta; export {} from "./foo"
+
+import .meta; import {} from "./foo"
+
+import ("./foo")
+
+== should preserve import and export words in list items ==
+- import is a word in lists
+- export is a word in lists, too!
+
+[expect]
+- import is a word in lists
+- export is a word in lists, too!
+
+== should keep import-like prose as markdown prose ==
+These are not imports.
+
+import is just a word in this paragraph and export is too.
+
+[expect]
+These are not imports.
+
+import is just a word in this paragraph and export is too.

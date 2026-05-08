@@ -1,0 +1,156 @@
+-- file.mdx --
+~~ tableFormat: compact ~~
+== should preserve mdx esm and jsx islands while formatting markdown constructs safely ==
+---
+title: Test
+---
+
+import {A,B} from "x"
+
+export const meta = {title: "Hi"}
+
+# Hello
+
+<Component prop={1}>
+  <Child />
+</Component>
+
+| A | B |
+| - | - |
+| Text | <Hello>Text</Hello> |
+
+{/* comment */}
+
+[expect]
+---
+title: Test
+---
+
+import {A,B} from "x"
+
+export const meta = {title: "Hi"}
+
+# Hello
+
+<Component prop={1}>
+  <Child />
+</Component>
+
+| A | B |
+| --- | --- |
+| Text | <Hello>Text</Hello> |
+
+{/* comment */}
+
+== should not reinterpret import and export words in markdown prose ==
+- import is a word in lists
+- export is a word in lists, too!
+
+import is a word
+
+[expect]
+- import is a word in lists
+- export is a word in lists, too!
+
+import is a word
+
+== should preserve broader top-level esm-looking blocks ==
+import "side-effect-module"
+
+export async function loader() {
+  return null
+}
+
+export { loader as getStaticProps }
+
+[expect]
+import "side-effect-module"
+
+export async function loader() {
+  return null
+}
+
+export { loader as getStaticProps }
+
+== should format top-level esm through the host when available ==
+import {A,B} from "x"
+export const format_mdx_esm = true
+
+[expect]
+import { A, B } from "x"
+export const format_mdx_esm = true
+
+== should not host-format non-top-level import and export text ==
+    import {A,B} from "x"
+    export const format_mdx_esm = true
+
+- import {A,B} from "x"
+  export const format_mdx_esm = true
+
+[expect]
+    import {A,B} from "x"
+    export const format_mdx_esm = true
+
+- import {A,B} from "x"
+  export const format_mdx_esm = true
+
+== should format top-level jsx through the host when available ==
+<Component format_mdx_jsx={true}></Component>
+
+[expect]
+<Component format_mdx_jsx={true} />
+
+== should preserve top-level jsx when host output is unsafe ==
+<Component format_mdx_jsx_unsafe={true}></Component>
+
+[expect]
+<Component format_mdx_jsx_unsafe={true}></Component>
+
+== should keep adjacent top-level mdx blocks distinct ==
+<Component format_mdx_jsx={true}></Component>
+
+import {A,B} from "x"
+export const format_mdx_esm = true
+
+[expect]
+<Component format_mdx_jsx={true} />
+import { A, B } from "x"
+export const format_mdx_esm = true
+
+== should not host-format non-top-level jsx ==
+- <Component format_mdx_jsx={true}></Component>
+
+| A |
+| - |
+| <Component format_mdx_jsx={true}></Component> |
+
+<Component format_mdx_jsx={true}></Component> trailing text
+
+[expect]
+- <Component format_mdx_jsx={true}></Component>
+
+| A |
+| --- |
+| <Component format_mdx_jsx={true}></Component> |
+
+<Component format_mdx_jsx={true}></Component> trailing text
+
+== should preserve mdx boundaries while formatting fenced code ==
+```format
+fenced
+```
+
+```ts
+import {A,B} from "x"
+export const format_mdx_esm = true
+```
+
+[expect]
+```format
+fenced_formatted_80
+```
+
+```ts
+import {A,B} from "x"
+export const format_mdx_esm = true
+```

@@ -1,0 +1,131 @@
+-- file.mdx --
+~~ tableFormat: compact ~~
+== should format complex top-level jsx only through safe embedded output ==
+<Foo format_mdx_jsx_complex='yes'>
+      <Bar    >hi    </Bar>
+       {  hello       }
+       {     /* another comment */}
+</Foo>
+
+[expect]
+<Foo format_mdx_jsx_complex="yes">
+  <Bar>hi</Bar>
+  {hello}
+  {/* another comment */}
+</Foo>
+
+== should preserve top-level jsx when embedded formatter returns none ==
+<Component formatter_unavailable={true}></Component>
+
+[expect]
+<Component formatter_unavailable={true}></Component>
+
+== should reject jsx host output that injects markdown boundaries ==
+<Component format_mdx_jsx_inject_markdown={true}></Component>
+
+[expect]
+<Component format_mdx_jsx_inject_markdown={true}></Component>
+
+== should preserve top-level esm when embedded formatter returns none ==
+import {A,B} from "x"
+export const formatter_unavailable = true
+
+[expect]
+import {A,B} from "x"
+export const formatter_unavailable = true
+
+== should reject esm host output that injects markdown boundaries ==
+import {A,B} from "x"
+export const format_mdx_esm_unsafe = true
+
+[expect]
+import {A,B} from "x"
+export const format_mdx_esm_unsafe = true
+
+== should preserve malformed top-level jsx raw ==
+<Foo>
+  <Bar>
+</Foo>
+
+[expect]
+<Foo>
+  <Bar>
+</Foo>
+
+== should preserve inline jsx and expressions in markdown prose ==
+A <Badge value={count} /> badge and {value} expression.
+
+[expect]
+A <Badge value={count} /> badge and {value} expression.
+
+== should preserve inline and standalone mdx comments ==
+A {/* JS-style comment */} comment.
+
+{
+  /* Another JS-style comment */
+}
+
+[expect]
+A {/* JS-style comment */} comment.
+
+{
+  /* Another JS-style comment */
+}
+
+== should preserve standalone brace expression blocks raw ==
+{ keep   this   raw }
+
+[expect]
+{ keep   this   raw }
+
+== should not host-format jsx-like content in headings lists or tables ==
+# Title <Component format_mdx_jsx={true}></Component>
+
+- <Component format_mdx_jsx={true}></Component>
+
+| A |
+| - |
+| <Component format_mdx_jsx={true}></Component> |
+
+[expect]
+# Title <Component format_mdx_jsx={true}></Component>
+
+- <Component format_mdx_jsx={true}></Component>
+
+| A |
+| --- |
+| <Component format_mdx_jsx={true}></Component> |
+
+== should support mdx comment single-node ignore directives ==
+{/* dprint-ignore */}
+
+```format
+ignored
+```
+
+```format
+formatted
+```
+
+[expect]
+{/* dprint-ignore */}
+
+```format
+ignored
+```
+
+```format
+formatted_formatted_80
+```
+
+== should support mdx comment ignore file directives ==
+{/* dprint-ignore-file */}
+testing     this     out
+
+testing    this    out
+
+[expect]
+{/* dprint-ignore-file */}
+testing     this     out
+
+testing    this    out
